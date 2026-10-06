@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeLens AI — AI-Powered GitHub Codebase RAG Assistant</title>
+  <meta name="description" content="Enter any public GitHub repository to index its source code into ChromaDB and ask natural-language questions grounded in the repository context with exact line citations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Prism.js for code syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="mobile-toggle-btn" class="icon-btn mobile-only" aria-label="Toggle Sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <div class="brand-logo" id="brand-logo-btn" title="Back to Repository Input">
+          <span class="brand-icon">◈</span>
+          <span class="brand-name">CodeLens <span class="gradient-text">AI</span></span>
+          <span class="badge badge-btech">B.Tech RAG Project</span>
+        </div>
+      </div>
+
+      <div class="header-center" id="active-repo-badge-container" style="display: none;">
+        <div class="active-repo-chip">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+          <span id="header-repo-name">owner/repo</span>
+          <span class="status-indicator ready" id="header-status-indicator"></span>
+          <span class="status-text" id="header-status-text">Indexed ✓</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="btn-new-repo" class="btn btn-secondary btn-sm" style="display: none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Change Repository
+        </button>
+        <button id="btn-api-info" class="btn btn-ghost btn-sm" title="View Architecture & LLM settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Architecture
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="app-body">
+      
+      <!-- SCREEN 1: LANDING & REPOSITORY INPUT -->
+      <section id="screen-landing" class="screen-view active">
+        <div class="hero-container">
+          <div class="hero-badge">
+            <span class="sparkle">✦</span> Semantic Code Search &amp; Grounded RAG
+          </div>
+          <h1 class="hero-title">
+            Understand Any GitHub Repository with <span class="gradient-text">CodeLens AI</span>
+          </h1>
+          <p class="hero-subtitle">
+            Enter a public GitHub repository. Our pipeline clones the codebase, extracts source files, generates dense vector embeddings, and answers your questions with exact line citations.
+          </p>
+
+          <!-- Input Card -->
+          <div class="repo-input-card">
+            <div class="input-form-wrapper">
+              <div class="input-prefix">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+              </div>
+              <input 
+                type="url" 
+                id="input-repo-url" 
+                class="repo-url-input" 
+                placeholder="https://github.com/owner/repository"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button id="btn-analyze" class="btn btn-primary btn-analyze">
+                <span class="btn-text">Analyze Repository</span>
+                <span class="btn-icon">→</span>
+              </button>
+            </div>
+
+            <!-- Quick Sample Repositories -->
+            <div class="sample-chips-row">
+              <span class="sample-label">Try popular repositories:</span>
+              <button class="sample-chip" data-url="https://github.com/pallets/flask">pallets/flask</button>
+              <button class="sample-chip" data-url="https://github.com/psf/requests">psf/requests</button>
+              <button class="sample-chip" data-url="https://github.com/fastapi/fastapi">fastapi/fastapi</button>
+            </div>
+
+            <!-- Re-indexing checkbox option -->
+            <div class="input-options">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-force-reindex">
+                <span>Force fresh re-clone &amp; re-index (bypass cache)</span>
+              </label>
+            </div>
+
+            <!-- Validation Error Alert -->
+            <div id="landing-error-box" class="alert-box alert-error" style="display: none;">
+              <span class="alert-icon">⚠️</span>
+              <span id="landing-error-message" class="alert-text">Error message</span>
+            </div>
+          </div>
+
+          <!-- Live Progress Box (Hidden initially) -->
+          <div id="landing-progress-box" class="indexing-progress-card" style="display: none;">
+            <div class="progress-header">
+              <div class="progress-title-row">
+                <div class="spinner-sm"></div>
+                <h3 id="progress-step-title">Analyzing repository...</h3>
+              </div>
+              <span id="progress-pct-badge" class="badge badge-pct">0%</span>
+            </div>
+
+            <div class="progress-bar-track">
+              <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+
+            <p id="progress-step-detail" class="progress-subtext">Initializing repository connection...</p>
+
+            <!-- Real Pipeline Steps Checklist -->
+            <div class="pipeline-steps-checklist">
+              <div class="step-item" id="step-clone">
+                <span class="step-indicator">○</span>
+                <span class="step-label">Validate &amp; Clone Repository</span>
+              </div>
+              <div class="step-item" id="step-scan">
+                <span class="step-indicator">○</span>
+                <span class="step-label">Scan &amp; Filter Supported Files</span>
+              </div>
+              <div class="step-item" id="step-chunk">
+                <span class="step-indicator">○</span>
+                <span class="step-label">Chunk Code with Line Preservation</span>
+              </div>
+              <div class="step-item" id="step-embed">
+                <span class="step-indicator">○</span>
+                <span class="step-label">Generate Vector Embeddings</span>
+              </div>
+              <div class="step-item" id="step-index">
+                <span class="step-indicator">○</span>
+                <span class="step-label">Build ChromaDB Vector Index</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Cards -->
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon-wrapper cyan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+              <h3 class="feature-title">Semantic Code Search</h3>
+              <p class="feature-desc">
+                Dense vector search powered by ChromaDB &amp; Sentence-Transformers finds relevant logic regardless of exact keyword matches.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-wrapper indigo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12A10 10 0 0 1 12 2z"></path><path d="M12 6v6l4 2"></path></svg>
+              </div>
+              <h3 class="feature-title">RAG-Powered Answers</h3>
+              <p class="feature-desc">
+                Context-grounded LLM synthesis strictly answers from retrieved source code. Zero fabricated files or non-existent functions.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon-wrapper emerald">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              </div>
+              <h3 class="feature-title">Verifiable Citations</h3>
+              <p class="feature-desc">
+                Every answer displays exact file paths, 1-indexed line ranges, and instant code viewer inspection with syntax highlighting.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SCREEN 2 & 3 & 4: WORKSPACE DASHBOARD (SIDEBAR + MAIN CONTENT) -->
+      <section id="screen-workspace" class="screen-view" style="display: none;">
+        <div class="workspace-layout">
+          
+          <!-- LEFT SIDEBAR: REPOSITORY STATS & FILE EXPLORER -->
+          <aside class="workspace-sidebar" id="workspace-sidebar">
+            <div class="sidebar-header">
+              <div class="sidebar-repo-meta">
+                <h2 id="sidebar-repo-title" class="sidebar-repo-title">repo/name</h2>
+                <div class="sidebar-status-row">
+                  <span class="status-dot ready"></span>
+                  <span id="sidebar-status-text" class="status-badge-text">Indexed ✓</span>
+                </div>
+              </div>
+              <button id="sidebar-close-btn" class="icon-btn mobile-only" aria-label="Close sidebar">✕</button>
+            </div>
+
+            <!-- Stats Overview Card -->
+            <div class="sidebar-stats-card">
+              <div class="stat-item">
+                <span class="stat-label">Files Indexed</span>
+                <span id="stat-files-count" class="stat-value">0</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-label">Code Chunks</span>
+                <span id="stat-chunks-count" class="stat-value">0</span>
+              </div>
+            </div>
+
+            <!-- Languages Breakdown -->
+            <div class="sidebar-section">
+              <div class="section-label-row">
+                <span class="sidebar-section-title">Languages</span>
+              </div>
+              <div id="languages-bars" class="languages-bars-container">
+                <!-- Dynamically populated -->
+              </div>
+              <div id="languages-tags" class="languages-tags-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- File Explorer Tree -->
+            <div class="sidebar-section file-explorer-section">
+              <div class="section-label-row">
+                <span class="sidebar-section-title">📁 Repository Files</span>
+                <span id="file-count-badge" class="badge badge-subtle">0 files</span>
+              </div>
+              <div class="file-search-bar">
+                <input type="text" id="file-search-input" placeholder="Filter files..." autocomplete="off">
+              </div>
+              <div id="file-tree-container" class="file-tree-container">
+                <div class="tree-loading">Loading file structure...</div>
+              </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+              <button id="btn-clear-repo" class="btn btn-ghost btn-sm btn-full text-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Clear Repository
+              </button>
+            </div>
+          </aside>
+
+          <!-- MAIN CONTENT AREA -->
+          <div class="workspace-main">
+            <!-- Workspace Navigation Tabs -->
+            <div class="workspace-tabs-bar">
+              <button class="tab-btn active" id="tab-btn-chat" data-tab="chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                AI Assistant
+              </button>
+              <button class="tab-btn" id="tab-btn-viewer" data-tab="viewer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <span id="tab-viewer-filename">File Viewer</span>
+              </button>
+            </div>
+
+            <!-- TAB 1: AI CHAT TAB -->
+            <div id="tab-content-chat" class="tab-panel active">
+              
+              <!-- Chat Stream -->
+              <div id="chat-messages-container" class="chat-messages-container">
+                <!-- Welcome greeting -->
+                <div class="chat-message assistant welcome-card">
+                  <div class="msg-avatar">◈</div>
+                  <div class="msg-body">
+                    <h3 class="welcome-heading">Welcome to your AI Codebase Assistant!</h3>
+                    <p>
+                      I have analyzed and indexed the repository into ChromaDB vector storage.
+                      Ask me anything about its architecture, authentication logic, database schema, or specific functions.
+                    </p>
+                    <div class="suggested-questions-block">
+                      <div class="suggested-title">💡 Suggested questions to get started:</div>
+                      <div id="suggested-questions-list" class="suggested-chips-grid">
+                        <!-- Populated dynamically -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chat Input Bar -->
+              <div class="chat-input-wrapper">
+                <form id="chat-form" class="chat-form">
+                  <div class="chat-input-box">
+                    <textarea 
+                      id="chat-input" 
+                      rows="1" 
+                      placeholder="Ask any question about this codebase... (e.g. Where is authentication handled?)"
+                      required
+                    ></textarea>
+                    <div class="input-actions-row">
+                      <button type="button" id="btn-clear-chat" class="btn btn-ghost btn-sm" title="Clear conversation history">
+                        Clear chat
+                      </button>
+                      <button type="submit" id="btn-send-chat" class="btn btn-primary btn-send">
+                        <span>Ask</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+                <div class="chat-input-hint">
+                  Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for a new line. Answers are grounded in indexed files.
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB 2: CODE FILE VIEWER TAB -->
+            <div id="tab-content-viewer" class="tab-panel">
+              <div class="code-viewer-container">
+                <div class="viewer-toolbar">
+                  <div class="viewer-meta">
+                    <span id="viewer-file-path" class="viewer-path">No file selected</span>
+                    <span id="viewer-lang-badge" class="badge badge-lang">Text</span>
+                    <span id="viewer-lines-badge" class="badge badge-subtle">0 lines</span>
+                  </div>
+                  <div class="viewer-actions">
+                    <button id="btn-copy-code" class="btn btn-ghost btn-sm" title="Copy code to clipboard">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div class="viewer-code-wrapper" id="viewer-code-wrapper">
+                  <pre><code id="viewer-code-block" class="language-plaintext">// Select a file from the repository explorer on the left or click a source citation in chat.</code></pre>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- SOURCE SNIPPET MODAL / DRAWER -->
+  <div id="source-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-row">
+          <span class="modal-icon">📄</span>
+          <div>
+            <h3 id="modal-file-path" class="modal-file-name">file_path</h3>
+            <span id="modal-line-range" class="badge badge-subtle">Lines 1-50</span>
+            <span id="modal-score" class="badge badge-pct">Score: 0.85</span>
+          </div>
+        </div>
+        <div class="modal-header-actions">
+          <button id="btn-open-in-viewer" class="btn btn-secondary btn-sm">Open Full File</button>
+          <button id="modal-close-btn" class="icon-btn" aria-label="Close modal">✕</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <pre><code id="modal-code-snippet" class="language-plaintext"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE & B.TECH VIVA INFO MODAL -->
+  <div id="arch-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">System Architecture &amp; RAG Pipeline</h3>
+        <button id="arch-close-btn" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body markdown-body">
+        <h4>Overview &amp; Workflow</h4>
+        <p>This application implements a complete Retrieval-Augmented Generation (RAG) system for GitHub repositories:</p>
+        <ol>
+          <li><strong>Clone &amp; Filter:</strong> Shallow clones the repo and filters 20+ supported programming/markup file types, ignoring binaries and vendor folders (<code>node_modules</code>, <code>venv</code>, etc.).</li>
+          <li><strong>Chunking:</strong> Line-based sliding window (100 lines chunk, 15 lines overlap) preserving exact line numbers and file paths.</li>
+          <li><strong>Vector Embeddings:</strong> Generates 384-dimensional dense vectors using <code>all-MiniLM-L6-v2</code> (Sentence-Transformers).</li>
+          <li><strong>ChromaDB:</strong> Persists embeddings, document text, and metadata in an isolated local collection with cosine similarity.</li>
+          <li><strong>Grounded LLM Answer:</strong> Retrieves top-5 relevant chunks, formats context, and prompts Google Gemini / OpenAI with strict grounding.</li>
+        </ol>
+        <div class="callout-box">
+          <strong>Environment Configuration:</strong> Set <code>LLM_PROVIDER=gemini</code> or <code>openai</code> and your <code>LLM_API_KEY</code> in the <code>.env</code> file.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Prism.js Core & Language bundle for syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+  <!-- Modular Frontend JS -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/ui.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
