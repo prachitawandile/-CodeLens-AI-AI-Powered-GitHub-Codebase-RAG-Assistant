@@ -32,17 +32,6 @@
           <span id="header-repo-name">owner/repo</span>
         </div>
       </div>
-
-      <div class="header-right">
-        <button id="btn-new-repo" class="btn btn-secondary btn-sm" style="display: none;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Change Repository
-        </button>
-        <button id="btn-api-info" class="btn btn-ghost btn-sm" title="View Architecture & LLM settings">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          Architecture
-        </button>
-      </div>
     </header>
 
     <!-- Main Container -->
@@ -364,29 +353,7 @@
     </div>
   </div>
 
-  <!-- ARCHITECTURE & B.TECH VIVA INFO MODAL -->
-  <div id="arch-modal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card modal-lg">
-      <div class="modal-header">
-        <h3 class="modal-title">System Architecture &amp; RAG Pipeline</h3>
-        <button id="arch-close-btn" class="icon-btn">✕</button>
-      </div>
-      <div class="modal-body markdown-body">
-        <h4>Overview &amp; Workflow</h4>
-        <p>This application implements a complete Retrieval-Augmented Generation (RAG) system for GitHub repositories:</p>
-        <ol>
-          <li><strong>Clone &amp; Filter:</strong> Shallow clones the repo and filters 20+ supported programming/markup file types, ignoring binaries and vendor folders (<code>node_modules</code>, <code>venv</code>, etc.).</li>
-          <li><strong>Chunking:</strong> Line-based sliding window (100 lines chunk, 15 lines overlap) preserving exact line numbers and file paths.</li>
-          <li><strong>Vector Embeddings:</strong> Generates 384-dimensional dense vectors using <code>all-MiniLM-L6-v2</code> (Sentence-Transformers).</li>
-          <li><strong>ChromaDB:</strong> Persists embeddings, document text, and metadata in an isolated local collection with cosine similarity.</li>
-          <li><strong>Grounded LLM Answer:</strong> Retrieves top-5 relevant chunks, formats context, and prompts Google Gemini / OpenAI with strict grounding.</li>
-        </ol>
-        <div class="callout-box">
-          <strong>Environment Configuration:</strong> Set <code>LLM_PROVIDER=gemini</code> or <code>openai</code> and your <code>LLM_API_KEY</code> in the <code>.env</code> file.
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Toast Notification -->
   <div id="toast-container" class="toast-container"></div>
